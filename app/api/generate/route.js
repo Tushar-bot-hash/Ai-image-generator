@@ -6,7 +6,7 @@ const NVIDIA_ENDPOINT = process.env.NVIDIA_ENDPOINT;
 export async function POST(request) {
   try {
     const { prompt } = await request.json();
-
+    
     if (!prompt) {
       return NextResponse.json(
         { error: 'Prompt is required' },
@@ -25,17 +25,17 @@ export async function POST(request) {
       prompt: prompt,
       note: 'Generated with NVIDIA Stability AI SD 3.5'
     });
-
   } catch (error) {
     console.error('Error:', error);
     
     // Fallback to placeholder
-    const placeholderUrl = generatePlaceholderImage(prompt);
+    const placeholderUrl = generatePlaceholderImage(prompt || 'Error');
     return NextResponse.json({ 
       success: true,
       imageUrl: placeholderUrl,
       prompt: prompt,
-      note: 'Using placeholder - NVIDIA AI service unavailable'
+      note: 'Using placeholder - NVIDIA AI service unavailable',
+      error: error.message
     });
   }
 }
@@ -88,7 +88,6 @@ async function generateImageWithNVIDIA(prompt) {
       console.log('Unexpected NVIDIA response format:', data);
       throw new Error('Unexpected response format from NVIDIA API');
     }
-
   } catch (error) {
     console.error('NVIDIA image generation failed:', error);
     throw error;
