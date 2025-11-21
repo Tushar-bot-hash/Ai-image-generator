@@ -51,17 +51,19 @@ export default function ImageGenerator() {
         body: JSON.stringify({ prompt: prompt.trim() }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Server error: ${response.status}`);
+      }
 
       if (data.error) {
         throw new Error(data.error);
       }
 
-      setImageUrl(data.imageUrl);
+      // Add cache busting to ensure fresh image
+      const cacheBustUrl = data.imageUrl + (data.imageUrl.includes('?') ? '&' : '?') + `t=${Date.now()}`;
+      setImageUrl(cacheBustUrl);
       setGenerationTime(Date.now() - startTime);
       
     } catch (err) {
@@ -80,99 +82,88 @@ export default function ImageGenerator() {
 
   const handleDownload = async () => {
     try {
-      if (imageUrl.startsWith('blob:')) {
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ai-generated-${Date.now()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ai-generated-${Date.now()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pollinations-${selectedPrompt.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (err) {
       setError('Failed to download image');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-8 px-4">
       <div className="max-w-6xl mx-auto">
         
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-800 mb-4">
-            AI Image Generator
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+            Pollinations.ai Generator
           </h1>
-          <p className="text-xl text-gray-600 mb-2">
-            Free AI Image Generation - No API Key Required
+          <p className="text-lg md:text-xl text-gray-600 mb-4">
+            Free AI Image Generation powered by Pollinations.ai
           </p>
-          <div className="flex justify-center items-center gap-4 mt-4">
-            <div className="flex items-center gap-2 bg-green-100 px-3 py-1 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-green-700 font-medium">Powered by Pollinations.ai</span>
-            </div>
-            <div className="flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full">
-              <span className="text-sm text-purple-700 font-medium">100% Free</span>
-            </div>
+          <div className="flex flex-wrap justify-center items-center gap-3">
+            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+              ✅ No API Key Required
+            </span>
+            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+              🚀 Fast Generation
+            </span>
+            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+              🎨 Multiple Styles
+            </span>
           </div>
         </div>
 
-        {/* Main Content - INPUT FIELDS AND BUTTONS */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+        {/* Main Generator Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
           <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
             Choose Your Inspiration
           </h2>
           
           {/* Category Selection */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             {Object.entries(categories).map(([category, data]) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
                 disabled={isLoading}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                className={`p-3 rounded-xl border-2 transition-all duration-200 ${
                   selectedCategory === category 
-                    ? 'border-purple-500 bg-purple-50 transform scale-105' 
+                    ? 'border-purple-500 bg-purple-50 shadow-md' 
                     : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                <div className="text-2xl mb-2">{data.icon}</div>
-                <div className="font-semibold text-gray-800 capitalize">
+                <div className="text-2xl mb-1">{data.icon}</div>
+                <div className="font-medium text-gray-800 text-sm capitalize">
                   {category}
                 </div>
               </button>
             ))}
           </div>
 
-          {/* Prompt Selection - APPEARS WHEN CATEGORY IS SELECTED */}
+          {/* Prompt Selection */}
           {selectedCategory && (
-            <div className="border-t pt-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-                Choose a {selectedCategory} theme:
+            <div className="border-t pt-6 mb-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                {categories[selectedCategory].icon} Choose a {selectedCategory} theme:
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {categories[selectedCategory].prompts.map((prompt, index) => (
                   <button
                     key={index}
                     onClick={() => generateImage(prompt)}
                     disabled={isLoading}
                     className="p-3 text-left bg-gray-50 hover:bg-purple-50 border border-gray-200 
-                             rounded-lg transition-colors duration-200 disabled:opacity-50
-                             hover:border-purple-300 hover:shadow-md"
+                             rounded-lg transition-all duration-200 disabled:opacity-50
+                             hover:border-purple-300 hover:shadow-sm"
                   >
                     <span className="text-gray-800 font-medium">{prompt}</span>
                   </button>
@@ -181,37 +172,37 @@ export default function ImageGenerator() {
             </div>
           )}
 
-          {/* Custom Input Field */}
+          {/* Custom Prompt Input */}
           <div className="border-t pt-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-              Or Create Your Own Prompt
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
+              ✨ Or Create Your Own Prompt
             </h3>
-            <form onSubmit={handleCustomSubmit} className="max-w-2xl mx-auto">
-              <div className="flex gap-4">
+            <form onSubmit={handleCustomSubmit}>
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={customPrompt}
                   onChange={(e) => setCustomPrompt(e.target.value)}
-                  placeholder="Describe exactly what you want to see... (e.g., 'a beautiful sunset over mountains')"
+                  placeholder="Describe your image in detail... (e.g., 'a majestic dragon flying over a medieval castle at sunset')"
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-xl 
-                           focus:outline-none focus:ring-2 focus:ring-purple-500
-                           disabled:opacity-50"
+                           focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
+                           disabled:opacity-50 placeholder-gray-400"
                   disabled={isLoading}
                 />
                 <button
                   type="submit"
                   disabled={isLoading || !customPrompt.trim()}
-                  className="px-6 py-3 bg-purple-500 text-white font-semibold rounded-xl 
-                           hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed
-                           transition duration-200 min-w-[120px]"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold rounded-xl 
+                           hover:from-purple-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed
+                           transition-all duration-200 min-w-[140px] shadow-sm"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                       Generating...
                     </span>
                   ) : (
-                    'Generate'
+                    'Generate Image'
                   )}
                 </button>
               </div>
@@ -223,15 +214,15 @@ export default function ImageGenerator() {
         {isLoading && (
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-              <p className="mt-4 text-lg text-gray-600 text-center">
-                AI is generating your image...
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-500 border-t-transparent mb-4"></div>
+              <p className="text-lg font-semibold text-gray-700 mb-2">
+                AI is creating your image...
               </p>
-              <p className="text-sm text-gray-500 mt-2">
-                "{selectedPrompt}"
+              <p className="text-gray-500 text-center mb-1">
+                &ldquo;{selectedPrompt}&rdquo;
               </p>
-              <p className="text-xs text-gray-400 mt-4">
-                Using Pollinations.ai - This may take 10-20 seconds
+              <p className="text-sm text-gray-400 mt-4">
+                Powered by Pollinations.ai • This usually takes 10-30 seconds
               </p>
             </div>
           </div>
@@ -240,49 +231,57 @@ export default function ImageGenerator() {
         {/* Error State */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-8">
-            <h3 className="text-red-800 font-semibold mb-2">Error</h3>
-            <p className="text-red-600">{error}</p>
-            <button 
-              onClick={() => setError('')}
-              className="mt-3 px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
-            >
-              Dismiss
-            </button>
+            <div className="flex items-start">
+              <div className="text-red-500 text-xl mr-3">⚠️</div>
+              <div>
+                <h3 className="text-red-800 font-semibold mb-1">Generation Error</h3>
+                <p className="text-red-600">{error}</p>
+                <button 
+                  onClick={() => setError('')}
+                  className="mt-3 px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Results - SHOWS GENERATED IMAGE */}
+        {/* Results Section */}
         {imageUrl && !isLoading && (
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
             <div className="flex flex-col lg:flex-row gap-8">
+              
               {/* Image Display */}
               <div className="lg:w-2/3">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                   <h2 className="text-2xl font-semibold text-gray-800">
-                    Your AI Generated Image
+                    🎉 Your Generated Image
                   </h2>
                   <button
                     onClick={handleDownload}
-                    className="px-6 py-2 bg-green-500 text-white font-semibold 
-                             rounded-lg hover:bg-green-600 transition duration-200"
+                    className="px-6 py-2 bg-green-500 text-white font-semibold rounded-lg 
+                             hover:bg-green-600 transition duration-200 shadow-sm flex items-center gap-2"
                   >
+                    <span>📥</span>
                     Download Image
                   </button>
                 </div>
                 
+                {/* Image Container */}
                 <div className="border-2 border-gray-200 rounded-xl overflow-hidden 
-                              shadow-lg bg-gray-50">
+                              shadow-lg bg-gray-50 flex justify-center">
                   <img 
                     src={imageUrl} 
                     alt={`AI Generated: ${selectedPrompt}`}
-                    className="w-full h-auto max-w-2xl mx-auto"
-                    onError={() => setError('Failed to load generated image')}
+                    className="w-full h-auto max-w-2xl"
+                    onError={() => setError('Failed to load generated image. Please try generating again.')}
                   />
                 </div>
 
                 {/* Generation Info */}
-                <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
-                  <span>Generated in {(generationTime / 1000).toFixed(1)} seconds</span>
+                <div className="mt-4 flex flex-wrap justify-between items-center gap-2 text-sm text-gray-600">
+                  <span>⏱️ Generated in {(generationTime / 1000).toFixed(1)}s</span>
                   <span className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                     Powered by Pollinations.ai
@@ -290,26 +289,26 @@ export default function ImageGenerator() {
                 </div>
 
                 {/* Prompt Display */}
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Prompt used:</p>
-                  <p className="text-gray-800 font-medium">"{selectedPrompt}"</p>
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600 mb-1 font-medium">Prompt used:</p>
+                  <p className="text-gray-800">&ldquo;{selectedPrompt}&rdquo;</p>
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons Sidebar */}
               <div className="lg:w-1/3">
-                <div className="bg-gray-50 rounded-xl p-6">
+                <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    Actions
+                    🔧 Actions
                   </h3>
                   
                   <div className="space-y-3">
                     <button
                       onClick={() => generateImage(selectedPrompt)}
                       className="w-full px-4 py-3 bg-purple-500 text-white rounded-lg
-                               hover:bg-purple-600 transition duration-200 font-semibold"
+                               hover:bg-purple-600 transition duration-200 font-semibold shadow-sm"
                     >
-                      Generate Again
+                      🔄 Generate Again
                     </button>
                     
                     {selectedCategory && (
@@ -320,9 +319,9 @@ export default function ImageGenerator() {
                           generateImage(randomPrompt);
                         }}
                         className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg
-                                 hover:bg-blue-600 transition duration-200 font-semibold"
+                                 hover:bg-blue-600 transition duration-200 font-semibold shadow-sm"
                       >
-                        Try Another {selectedCategory} Image
+                        🎲 Random {selectedCategory} Image
                       </button>
                     )}
                     
@@ -334,10 +333,17 @@ export default function ImageGenerator() {
                         setError('');
                       }}
                       className="w-full px-4 py-3 bg-gray-500 text-white rounded-lg
-                               hover:bg-gray-600 transition duration-200 font-semibold"
+                               hover:bg-gray-600 transition duration-200 font-semibold shadow-sm"
                     >
-                      Create New Image
+                      🆕 Create New Image
                     </button>
+                  </div>
+
+                  {/* Tips */}
+                  <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-xs text-blue-700">
+                      <strong>💡 Tip:</strong> For better results, be descriptive with colors, style, and mood in your prompts.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -345,28 +351,9 @@ export default function ImageGenerator() {
           </div>
         )}
 
-        {/* Features Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mt-8">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-            🎨 Free AI Image Generation
-          </h3>
-          <div className="grid md:grid-cols-3 gap-6 text-gray-600">
-            <div className="text-center">
-              <div className="text-3xl mb-3">🆓</div>
-              <h4 className="font-semibold text-gray-800 mb-2">Completely Free</h4>
-              <p className="text-sm">No API keys, no credit card, no limits</p>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl mb-3">⚡</div>
-              <h4 className="font-semibold text-gray-800 mb-2">Fast Generation</h4>
-              <p className="text-sm">Get AI images in seconds</p>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl mb-3">🔧</div>
-              <h4 className="font-semibold text-gray-800 mb-2">Easy to Use</h4>
-              <p className="text-sm">Simple prompts, great results</p>
-            </div>
-          </div>
+        {/* Footer Info */}
+        <div className="text-center mt-12 text-gray-500 text-sm">
+          <p>Powered by Pollinations.ai • Free AI Image Generation • No API Key Required</p>
         </div>
 
       </div>
