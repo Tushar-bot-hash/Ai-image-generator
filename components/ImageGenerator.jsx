@@ -97,6 +97,12 @@ export default function ImageGenerator() {
     }
   };
 
+  // Debug input change
+  const handleInputChange = (e) => {
+    console.log('Input value:', e.target.value);
+    setCustomPrompt(e.target.value);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -172,22 +178,27 @@ export default function ImageGenerator() {
             </div>
           )}
 
-          {/* Custom Prompt Input */}
+          {/* Custom Prompt Input - FIXED VERSION */}
           <div className="border-t pt-6">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">
               ✨ Or Create Your Own Prompt
             </h3>
-            <form onSubmit={handleCustomSubmit}>
+            <form onSubmit={handleCustomSubmit} className="space-y-3">
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder="Describe your image in detail... (e.g., 'a majestic dragon flying over a medieval castle at sunset')"
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl 
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl 
                            focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
-                           disabled:opacity-50 placeholder-gray-400"
+                           disabled:opacity-50 placeholder-gray-400 bg-white text-gray-900"
                   disabled={isLoading}
+                  style={{ 
+                    color: '#000000',
+                    backgroundColor: '#ffffff',
+                    borderColor: '#d1d5db'
+                  }}
                 />
                 <button
                   type="submit"
@@ -206,6 +217,14 @@ export default function ImageGenerator() {
                   )}
                 </button>
               </div>
+              
+              {/* Debug display - shows what you're typing */}
+              {customPrompt && (
+                <div className="p-3 bg-gray-100 rounded-lg border border-gray-300">
+                  <p className="text-sm text-gray-600 font-medium">You're typing:</p>
+                  <p className="text-gray-800 font-semibold">"{customPrompt}"</p>
+                </div>
+              )}
             </form>
           </div>
         </div>
